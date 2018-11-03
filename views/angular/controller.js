@@ -555,6 +555,7 @@ app.controller('registerController',['$scope','encrypt','$http','$state',functio
         })
             .error(function (data) {
             //add error handling
+            alert(data);
             console.log(data)
         });
     }
