@@ -22,7 +22,7 @@
                                 </div>
                             </div>
                             <div class="box-body">
-                                <div class="box box-primary" ng-repeat="group in group_list"  ng-click="group_switch(group)">
+                                <div class="box" ng-repeat="group in group_list"  ng-click="group_switch(group)">
                                     <div class="box-header with-border">
                                         <h3 class="box-title">{{group.name}}</h3>
                     
@@ -58,7 +58,24 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-6 ">
+            <div class="col-md-4 ">
+                    <div class="box box-primary direct-chat direct-chat-primary">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Open Group List</h3>
+                        </div>
+                        <div class="box-body">
+                            <div class="box" ng-repeat="group in open_group_list">
+                                <div class="box-header with-border">
+                                    <h3 class="box-title">{{group.name}}</h3>
+                                    <div class="box-tools">
+                                       <button class="btn btn-primary"  ng-click="join_group(group)">Join</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        <div class="col-md-4 ">
             <!-- USERS LIST -->
             <div class="box box-primary">
                 <div class="box-header with-border">
@@ -85,7 +102,7 @@
                 </div>
                 <!-- /.box-body -->
                 <div class="box-footer text-center">
-                    <a href="javascript:void(0)" class="uppercase">Something</a>
+                   
                 </div>
                 <!-- /.box-footer -->
             </div>
@@ -94,7 +111,7 @@
         <!-- /.col -->
 
 
-        <div class="col-md-6">
+        <div class="col-md-4">
             <!-- USERS LIST -->
             <div class="box box-primary">
                 <div class="box-header with-border">
@@ -121,7 +138,7 @@
                 </div>
                 <!-- /.box-body -->
                 <div class="box-footer text-center">
-                    <a href="javascript:void(0)" class="uppercase">Something</a>
+                   
                 </div>
                 <!-- /.box-footer -->
             </div>

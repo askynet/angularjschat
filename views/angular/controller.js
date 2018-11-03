@@ -83,11 +83,15 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
     socket.on('group_list',function(data){
         console.log('group list');
         console.log(data);
-        data.forEach(grp => {
-            grp.message_count=0;
-        });
         $scope.$apply(function () {
         $scope.group_list=data;
+        });
+    })
+    socket.on('open_group_list',function(data){
+        console.log('open group list');
+        console.log(data);
+        $scope.$apply(function () {
+        $scope.open_group_list=data;
         });
     })
     socket.on('users', function(data) {
@@ -303,6 +307,21 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
             //add error handling
             console.log(data)
         });
+    }
+    $scope.join_group=function(grp){
+        console.log(grp._id)
+        var data={
+            group:grp._id,
+            user:$scope.user
+        }
+        $http({method: 'POST',url:'http://'+url+'/join_group', data:data})//, headers:config})
+        .success(function (data) {
+        console.log(data)
+    })
+        .error(function (data) {
+        //add error handling
+        console.log(data)
+    });
     }
     $scope.group_message= function(message){
         console.log($scope.groupMessage);

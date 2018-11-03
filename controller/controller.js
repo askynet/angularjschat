@@ -33,7 +33,7 @@ module.exports = function (app,io){
     var connectedUsers=[];
     
     app.post('/login',function(req,res){
-        console.log(req.body.handle);
+        //console.log(req.body.handle);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader("Access-Control-Allow-Method","'GET, POST, OPTIONS, PUT, PATCH, DELETE'");
         handle = req.body.handle;
@@ -45,7 +45,7 @@ module.exports = function (app,io){
                 res.send("User has not registered");
             }
             else{
-                console.log("Asas"+__dirname);
+                //console.log("Asas"+__dirname);
 //                res.sendFile(path.resolve(__dirname+"/../views/chat1.html"));
                 res.send("success");
             }     
@@ -59,9 +59,8 @@ module.exports = function (app,io){
         console.log("Connection : " +socket.id);
         io.to(socket.id).emit('handle', handle);
         if(handle!=null){
-            socketUsersCollection.create({
-                handle:handle,
-                socketid:socket.id
+            socketUsersCollection.update({handle:handle},{handle:handle,socketid:socket.id},{upsert:true},function(err){
+                console.log('user socket id updated');
             })
         }else{
             io.to(socket.id).emit('logout', handle);
@@ -75,16 +74,16 @@ module.exports = function (app,io){
                 }
             });
         }).catch(err=>{
-            console.log('no users are connected');
+            //console.log('no users are connected');
         })
-        console.log("Users list : ");
-        console.log(connectedUsers);
-        console.log("keys list : ");
-        console.log(keys)
+        //console.log("Users list : ");
+        //console.log(connectedUsers);
+        //console.log("keys list : ");
+        //console.log(keys)
         userCollection.find({"handle" : handle},{friends:1,_id:0},function(err,doc){
             if(err){res.json(err);}
             else{
-                console.log(doc);
+                //console.log(doc);
                 friends=[];
                 pending=[];
                 all_friends=[];
@@ -107,8 +106,8 @@ module.exports = function (app,io){
                         continue;
                     }
                 }
-                console.log("pending list: "+pending);
-                console.log("friends list: "+friends);
+                //console.log("pending list: "+pending);
+                //console.log("friends list: "+friends);
                 io.to(socket.id).emit('friend_list', friends);
                 io.to(socket.id).emit('pending_list', pending);
                 io.emit('users',users);
@@ -121,11 +120,15 @@ module.exports = function (app,io){
         }).catch(e=>{
             res.json(err);
         });
+        groupController.getAllOpenGroups(handle,function(result){
+            //console.log(result);
+            io.to(socket.id).emit('open_group_list', result);
+        })
         
         socket.on('group message',function(msg){
             console.log(msg);
             const roomhandler=msg.split("#*@")[0];
-            console.log(roomhandler);
+            //console.log(roomhandler);
             groupmsgCollection.create({
                 text : msg.split("#*@")[1],
                 owner: msg.split("#*@")[2],
@@ -136,29 +139,29 @@ module.exports = function (app,io){
             });
             groupsCollection.find({"roomhandler" :roomhandler}).exec()
             .then(group=>{
-                console.log('emit message to all users');
-                console.log(group[0].members);
+                //console.log('emit message to all users');
+                //console.log(group[0].members);
                 socketUsersCollection.find().exec().then(socketresult=>{
                     connectedUsers=[];
                     socketresult.forEach(element => {
                         connectedUsers[element.handle]=element.socketid;
                     });
-                    console.log(connectedUsers);
+                    //console.log(connectedUsers);
                     group[0].members.forEach(user => {
-                        console.log('send message to'+user.user+' on socket '+users[user.user]);
+                        //console.log('send message to'+user.user+' on socket '+users[user.user]);
                         io.to(connectedUsers[user.user]).emit('group',msg);
                     });
                 }).catch(err=>{
-                    console.log('no users are connected');
+                    //console.log('no users are connected');
                 })
                 
             }).catch(err=>{
-                console.log('error while emiting data');
+                //console.log('error while emiting data');
             });
         });
         
         socket.on('private message',function(msg){
-            console.log('message  :'+msg.split("#*@")[0]);
+            //console.log('message  :'+msg.split("#*@")[0]);
             messagesCollection.create({
                 "message":msg.split("#*@")[1],
                 "sender" :msg.split("#*@")[2],
@@ -169,7 +172,7 @@ module.exports = function (app,io){
                     socketresult.forEach(element => {
                         connectedUsers[element.handle]=element.socketid;
                     });
-                    console.log('sending message to socket id '+connectedUsers[msg.split("#*@")[0]]);
+                    //console.log('sending message to socket id '+connectedUsers[msg.split("#*@")[0]]);
                     io.to(connectedUsers[msg.split("#*@")[0]]).emit('private message', msg);
                 }).catch(err=>{
 
@@ -181,14 +184,14 @@ module.exports = function (app,io){
             socketUsersCollection.remove({socketid:socket.id});
            // delete keys[socket.id];
             io.emit('users',connectedUsers);
-            console.log(connectedUsers);
+            //console.log(connectedUsers);
         });
         socket.on('logout', function(msg){
             delete connectedUsers[msg];
             socketUsersCollection.remove({handle:msg});
            // delete keys[socket.id];
             io.emit('users',connectedUsers);
-            console.log(connectedUsers);
+            //console.log(connectedUsers);
         });
     });
     
@@ -198,10 +201,52 @@ module.exports = function (app,io){
     
     app.post('/addgroup',function(req,res){
         groupController.addGroup(req,res,function(result){
-            console.log(result);
+            //console.log(result);
             if(result==null)
                res.sendStatus(404);
             io.to(result.socket).emit('group_list', result.groups);
        })
     });
+    app.post('/getallopengroups',function(req,res){
+        groupController.getAllOpenGroups(req.body.handle,function(result){
+            if(result==null)
+             res.sendStatus(400)
+             res.status(200).json(result);
+        })
+    });
+    app.post('/join_group',function(req,res){
+        //console.log(req.body);
+        var groupid=req.body.group;
+        var user=req.body.user;
+        groupController.joinGroup(groupid,user,function(result){
+            if(result){
+                //console.log(result);
+                groupController.getUsersGroup(user,function(usersGroup){
+                    if(usersGroup!=null){
+                        socketUsersCollection.find({handle:user}).exec()
+                        .then(allOpeningSocket=>{
+                           // console.log(allOpeningSocket);
+                           var socketid='';
+                            allOpeningSocket.forEach(element => {
+                                console.log(element.socketid);
+                                socketid=element.socketid;
+                                io.to(element.socketid).emit('group_list', usersGroup);
+                            });
+                            groupController.getAllOpenGroups(handle,function(result){
+                                //console.log(result);
+                                io.to(socketid).emit('open_group_list', result);
+                            })
+                        })
+                        .catch(err=>{
+                            res.sendStatus(200);
+                        })
+                    }else{
+                        res.sendStatus(200);
+                    }
+                })
+            }else{
+                res.sendStatus(404);
+            }
+        })
+    })
 }

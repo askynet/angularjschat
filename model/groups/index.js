@@ -7,6 +7,7 @@ module.exports=mongoose.model('groups',new Schema({
     name : String,
     description  : String,
     owner: String,
+    roomhandler:String,
     admins:[],
     members:[],
     active:Boolean,
