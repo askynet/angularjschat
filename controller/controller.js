@@ -72,6 +72,18 @@ module.exports = function (app,io){
     });
     });
     
+    app.post('/group_messages',function(req,res){
+        console.log(req.body.roomhandler);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader("Access-Control-Allow-Method","'GET, POST, OPTIONS, PUT, PATCH, DELETE'");
+        handle = req.body.roomhandler;
+        models.groupmsgs.find({"group":handle}).sort('createon').exec()
+        .then(msgs=>{
+            res.status(200).json(msgs);
+        }).catch(e=>{
+            res.json(err);
+        });
+    })
     io.on('connection',function(socket){
         console.log("Connection :User is connected  "+handle);
         console.log("Connection : " +socket.id);
@@ -125,6 +137,7 @@ module.exports = function (app,io){
         socket.on('group message',function(msg){
             console.log(msg);
             const roomhandler=msg.split("#*@")[0];
+            console.log(roomhandler);
             models.groupmsgs.create({
                 text : msg.split("#*@")[1],
                 owner: msg.split("#*@")[2],
@@ -132,12 +145,17 @@ module.exports = function (app,io){
                 group:msg.split("#*@")[0],
                 active:true,
                 createon    : new Date()
-            })
-            models.user.find({"roomhandler" :roomhandler}).exec()
-            .then(users=>{
-                io.to(users).emit('group',msg);
+            });
+            models.groups.find({"roomhandler" :roomhandler}).exec()
+            .then(group=>{
+                console.log('emit message to all users');
+                console.log(group[0].members);
+                group[0].members.forEach(user => {
+                    console.log('send message to'+user.user+' on socket '+users[user.user]);
+                    io.to(users[user.user]).emit('group',msg);
+                });
             }).catch(err=>{
-                io.to(users).emit('group',msg);
+                console.log('error while emiting data');
             });
         });
         
