@@ -1,4 +1,4 @@
-# CHAT
+# SkyNET
 This is a chat application that can be used for local usage in a small network. It creates a local server and people connected to the network can do a group or private chat. The chat also gives facilites to block someone from pinging unnecessarily.
 
 # Instructions to run
@@ -26,15 +26,3 @@ Your server will be setup and ready for use.
 `Note: Handle should be unique for every user.`
 
 
-# Few Screen Shots
-#### Login Screen
-![login screen](https://github.com/sudheeshshetty/Chat/blob/master/screenshots/login.png "Login Page")  
-#### Confirming request 
-![Confirming request to chat](https://github.com/sudheeshshetty/Chat/blob/master/screenshots/confirm_request.png "Confirming Request")  
-#### Online users
-![online users](https://github.com/sudheeshshetty/Chat/blob/master/screenshots/online_users.png "Online users")  
-
-#### Chatting with Friend
-![Chatting](https://github.com/sudheeshshetty/Chat/blob/master/screenshots/chat.png? "Chatting with Friend")
-
- 
