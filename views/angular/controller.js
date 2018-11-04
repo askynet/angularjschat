@@ -301,6 +301,7 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
             $http({method: 'POST',url:'http://'+url+'/group_messages', data:grp})//, headers:config})
             .success(function (data) {
             console.log(data)
+	   document.getElementById("group").innerHTML="";
             for(var i=0;i<data.length;i++){
                 console.log(data[i].owner+' '+data[i].text);
                 if(data[i].owner!=$scope.user){
