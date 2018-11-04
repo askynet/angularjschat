@@ -1,5 +1,7 @@
 var path = require('path');
 var bodyParser = require('body-parser');
+var fs =require('fs');
+
 var userController=require('./user/user');
 var groupMSGController=require('./groupmessages/messages');
 var groupController=require('./group');
@@ -9,6 +11,7 @@ var groupsCollection=require('../model/groups');
 var groupmsgCollection=require('../model/groupsmsg');
 var messagesCollection=require('../model/messages');
 var socketUsersCollection=require('../model/socketusers')
+var socketController=require('./socket')
 module.exports = function (app,io){
     app.use( bodyParser.json() );
     app.use(bodyParser.urlencoded({     
@@ -76,6 +79,7 @@ module.exports = function (app,io){
         }).catch(err=>{
             //console.log('no users are connected');
         })
+        groupController.setUserOfflineForAllGroups(handle,function(result){});
         //console.log("Users list : ");
         //console.log(connectedUsers);
         //console.log("keys list : ");
@@ -148,8 +152,15 @@ module.exports = function (app,io){
                     });
                     //console.log(connectedUsers);
                     group[0].members.forEach(user => {
-                        //console.log('send message to'+user.user+' on socket '+users[user.user]);
-                        io.to(connectedUsers[user.user]).emit('group',msg);
+                        console.log('send message to'+user.user+' on socket '+users[user.user]);
+                        groupController.findUserIsOnlineToThisGroup(roomhandler,user.user,function(isOnline){
+                        console.log('user is online to this group')
+                           if(!isOnline){
+                            io.to(connectedUsers[user.user]).emit('groupnotification',{roomhandler:roomhandler,msg:'new message arrived'});
+                           }else{
+                            io.to(connectedUsers[user.user]).emit('group',msg);
+                           }
+                        })
                     });
                 }).catch(err=>{
                     //console.log('no users are connected');
@@ -193,6 +204,73 @@ module.exports = function (app,io){
             io.emit('users',connectedUsers);
             //console.log(connectedUsers);
         });
+        socket.on('groupimage',function(msg){
+            const roomhandler=msg.split("#*@")[0];
+            const handle=msg.split("#*@")[1];
+            const text=msg.split("#*@")[2] || '';
+            const imageData=msg.split("#*@")[3];
+
+            groupmsgCollection.create({
+                text : text,
+                img : imageData,
+                owner: handle,
+                mention:[],
+                group:roomhandler,
+                active:true,
+                createon    : new Date()
+            });
+            socketController.getSocketIdOfAllGroupConnectedUser(roomhandler,function(groupUsers){
+                groupUsers.forEach(element => {
+                    io.to(element.ha).emit('groupimage',msg);
+                });
+            })
+
+        })
+        socket.on('opengroup',function(msg){
+            const roomhandler=msg.split("#*@")[0];
+            const handle=msg.split("#*@")[1];
+            console.log('open group chat group ='+roomhandler+'  for='+handle);
+            groupController.getGroupByRoomHandler(roomhandler,function(group){
+                if(group!=null){
+                    if(group.online_users)
+                    {
+                        var present=false;
+                        group.online_users.forEach(element => {
+                         if(element.user==handle){
+                            present=true;
+                         }
+                        });
+                        if(!present){
+                            group.online_users.push({"user":handle});
+                        }
+                    }else{
+                        group.online_users=[];
+                        group.online_users.push({"user":handle});
+                    }
+                    console.log('you are now online user for this group='+roomhandler);
+                    groupController.updateGroupInfo(group,function(result){});
+                }
+            })
+        })
+        socket.on('closegroup',function(msg){
+            const roomhandler=msg.split("#*@")[0];
+            const handle=msg.split("#*@")[1];
+            groupController.getGroupByRoomHandler(roomhandler,function(group){
+                if(group!=null){
+                    if(group.online_users)
+                    {
+                        var onlineusers=[];
+                        group.online_users.forEach(function(item, index, object) {
+                            if (item.user === handle) {
+                              object.splice(index, 1);
+                            }
+                        });
+                        console.log('you are offline for this group'+roomhandler);
+                        groupController.updateGroupInfo(group,function(result){});
+                    }
+                }
+            })
+        })
     });
     
     app.post('/friend_request',userController.friend_req);
@@ -248,5 +326,8 @@ module.exports = function (app,io){
                 res.sendStatus(404);
             }
         })
+    })
+    app.post('/image',function(req,res){
+        var imageData=req.body.image;
     })
 }

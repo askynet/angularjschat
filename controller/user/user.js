@@ -1,4 +1,4 @@
-var socketusers=require('../socket/socket');
+var socketusers=require('../socket');
 var userCollection=require('../../model/user/user');
 var groupsCollection=require('../../model/groups');
 var groupmsgCollection=require('../../model/groupsmsg');

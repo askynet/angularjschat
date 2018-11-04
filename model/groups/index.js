@@ -8,8 +8,15 @@ module.exports=mongoose.model('groups',new Schema({
     description  : String,
     owner: String,
     roomhandler:String,
-    admins:[],
-    members:[],
+    admins:[{
+        user:String
+    }],
+    members:[{
+        user:String
+    }],
+    online_users:[{
+        user:String
+    }],
     active:Boolean,
     private:Boolean,
     createon    : Date

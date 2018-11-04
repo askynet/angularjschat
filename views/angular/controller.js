@@ -81,10 +81,15 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
 
     });
     socket.on('group_list',function(data){
-        console.log('group list');
-        console.log(data);
         $scope.$apply(function () {
         $scope.group_list=data;
+        for(var i=0;i<$scope.group_list.length;i++){
+               if($scope.group_list[i].msgCount==undefined){
+                $scope.group_list[i].msgCount=0;
+               }
+        }
+        console.log('group list');
+        console.log($scope.group_list);
         });
     })
     socket.on('open_group_list',function(data){
@@ -233,10 +238,24 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
     socket.on('logout', function(data) {
         window.location.href='';
     });
-    socket.on('group', function(data) {
-        console.log('message received');
+    socket.on('groupnotification',function(data){
+        console.log('new group notification');
         console.log(data);
-        var div = document.createElement('div');
+        var roomhandler=data.roomhandler;
+        $scope.$apply(function () {
+        for(var i=0;i<$scope.group_list.length;i++){
+            if($scope.group_list[i].roomhandler==roomhandler){
+                $scope.group_list[i].msgCount++;
+                console.log($scope.group_list[i]);
+            }
+        }
+      });
+        
+    })
+    socket.on('group', function(data) {
+        var roomhandler=data.split("#*@")[0];
+        if($scope.active_group.roomhandler==roomhandler){
+            var div = document.createElement('div');
         if(data.split("#*@")[2]!=$scope.user){
             div.innerHTML='<div class="direct-chat-msg"> \
             <div class="direct-chat-info clearfix">\
@@ -251,11 +270,11 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
             document.getElementById("group").appendChild(div);
             document.getElementById("group").scrollTop=document.getElementById("group").scrollHeight;
         }
-        if(document.getElementById("group")==undefined){
-            var groupid=data.split("#*@")[0];
-            console.log(groupid);
-            $scope.group_list[groupid].message_count++;
         }
+        console.log('message received');
+        console.log(data);
+        
+        
     });
     $scope.logout=function(){
         var handle={};
@@ -266,6 +285,18 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
         })
     }
     $scope.group_switch=function(grp){
+            if($scope.active_group!=undefined){
+                console.log('close  group socket');
+                socket.emit('closegroup',$scope.active_group.roomhandler+"#*@"+$scope.user);
+            }
+           // $scope.$apply(function () {
+                for(var i=0;i<$scope.group_list.length;i++){
+                    if($scope.group_list[i].roomhandler==grp.roomhandler){
+                        $scope.group_list[i].msgCount=0;
+                    }
+                }
+           //   });
+            socket.emit('opengroup',grp.roomhandler+"#*@"+$scope.user);
             $scope.active_group=grp;
             $http({method: 'POST',url:'http://'+url+'/group_messages', data:grp})//, headers:config})
             .success(function (data) {
@@ -339,6 +370,7 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
         document.getElementById("group").appendChild(div);
         document.getElementById("group").scrollTop=document.getElementById("group").scrollHeight;
         $scope.groupMessage=null;
+        document.getElementById('msgbox').value=null;
         console.log($scope.groupMessage);
         socket.emit('group message',$scope.active_group.roomhandler+"#*@"+message+"#*@"+$scope.user);
         $scope.groupMessage=null;

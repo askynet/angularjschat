@@ -5,6 +5,16 @@ var groupsCollection=require('../../model/groups');
 var groupmsgCollection=require('../../model/groupsmsg');
 var messagesCollection=require('../../model/messages');
 var randomstring = require("randomstring");
+
+/*const MongoClient = require('mongodb').MongoClient;
+var db=null;
+const url = 'mongodb://localhost:27017';
+// Database Name
+const dbName = 'chat';
+MongoClient.connect(url, function(err, client) {
+    db = client.db(dbName);
+});
+*/
 class groupHandler {
     addGroup(req,res,callback){
     var handle = req.body.owner;
@@ -28,6 +38,7 @@ class groupHandler {
                     user:handle
                 }
             ],
+            online:[],
             active:true,
             private:false,
             createon: new Date()
@@ -107,6 +118,43 @@ class groupHandler {
         callback(groups);
     }).catch(e=>{
         callback(null)
+    });
+  }
+  updateGroupInfo(group,callback){
+    groupsCollection.findOneAndUpdate({roomhandler:group.roomhandler},group,{new:true}).exec()
+    .then(result=>{
+        callback(result);
+    }).catch(err=>{
+        callback(null);
+    })
+  }
+  getGroupByRoomHandler(roomhandler,callback){
+      groupsCollection.findOne({roomhandler:roomhandler}).exec()
+      .then(group=>{
+            callback(group)
+      }).catch(err=>{
+        callback(null)
+      })
+  }
+  findUserIsOnlineToThisGroup(roomhandler,handle,callback){
+    groupsCollection.find({ roomhandler:roomhandler, online_users: { $elemMatch: { user: handle } } }).exec()
+    .then(groups=>{
+      // console.log(groups);
+       if(groups.length==0){
+            callback(false)
+       }else{
+            callback(true);
+       }
+    }).catch(e=>{
+        callback(false)
+    });
+  }
+  setUserOfflineForAllGroups(handle,callback){
+    //if(db!=null)
+      //  db.collection('groups').update({},{$pull:{'online_users':{ 'user' : 'aahire'} }});
+    groupmsgCollection.update({},{$pull:{'online_users':{ 'user' : handle} }},{multi : true},function(err,result){
+            console.log(err);
+            console.log(result);
     });
   }
 }
