@@ -38,6 +38,9 @@
             <div class="box box-primary direct-chat direct-chat-primary">
                 <div class="box-header with-border">
                     <h3 class="box-title">Group Chat : {{active_group.name}}</h3>
+                    <div class="box-tools">
+                        <button class="btn btn-box-tool"  ng-click="group_switch(null)"><i class="fa fa-times"></i></button>
+                     </div>
                 </div>
                 <div class="box-body">
                     <div class="direct-chat-messages" id="group">
@@ -177,7 +180,7 @@
                 <div class="modal-body">
                     <div class="form-group input-group">
                         <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
-                        <input class="form-control" type="text" name='handle' placeholder="handle" ng-model="groupname"/> 
+                        <input class="form-control" type="text" name='group' placeholder="group name" ng-model="groupname"/> 
                     </div>
                 </div>
                 <div class="modal-footer">

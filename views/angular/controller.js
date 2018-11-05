@@ -70,7 +70,8 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
     
 
     socket.on('friend_list', function(data) {
-        console.log("Friends list : "+data);
+        console.log("Friends list : ");
+        console.log(data);
         $scope.$apply(function () {
             $scope.allfriends.push.apply($scope.allfriends,data);
         });
@@ -78,7 +79,8 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
     });
 
     socket.on('pending_list', function(data) {
-
+        console.log('pending list');
+        console.log(data);
     });
     socket.on('group_list',function(data){
         $scope.$apply(function () {
@@ -136,7 +138,7 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
 //                'Content-Type': 'application/json'
 //            }
 //        };
-
+console.log(data);
         $http({method: 'POST',url:'http://'+url+'/friend_request',data})//, headers:config})
             .success(function (data) {
             console.log(data)
@@ -285,17 +287,22 @@ app.controller('myController',['$scope','socket','$http','$mdDialog','$compile',
         })
     }
     $scope.group_switch=function(grp){
+
             if($scope.active_group!=undefined){
                 console.log('close  group socket');
                 socket.emit('closegroup',$scope.active_group.roomhandler+"#*@"+$scope.user);
+            }else{
+                if(grp==null){
+                    $scope.active_group=undefined;
+                }
             }
-           // $scope.$apply(function () {
-                for(var i=0;i<$scope.group_list.length;i++){
+         
+            for(var i=0;i<$scope.group_list.length;i++){
                     if($scope.group_list[i].roomhandler==grp.roomhandler){
                         $scope.group_list[i].msgCount=0;
                     }
-                }
-           //   });
+            }
+        
             socket.emit('opengroup',grp.roomhandler+"#*@"+$scope.user);
             $scope.active_group=grp;
             $http({method: 'POST',url:'http://'+url+'/group_messages', data:grp})//, headers:config})

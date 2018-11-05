@@ -10,7 +10,8 @@ var userCollection=require('../model/user/user');
 var groupsCollection=require('../model/groups');
 var groupmsgCollection=require('../model/groupsmsg');
 var messagesCollection=require('../model/messages');
-var socketUsersCollection=require('../model/socketusers')
+var socketUsersCollection=require('../model/socketusers');
+var friendreq=require('../model/friendsrequest');
 var socketController=require('./socket')
 module.exports = function (app,io){
     app.use( bodyParser.json() );
@@ -26,7 +27,11 @@ module.exports = function (app,io){
         res.sendFile(path.resolve(__dirname+"/../views/index.html"));
     });
     
-    app.post('/register',userController.register);
+    app.post('/register',function(req,res){
+        userController.register(req,res,function(success,msg){
+            res.status(200).json({'msg':msg});
+        })
+    });
     
     var handle=null;
     var private=null;
@@ -56,7 +61,15 @@ module.exports = function (app,io){
     });
     
     app.post('/group_messages',groupMSGController.group_messages);
-    app.post('/logout',userController.logout);
+    app.post('/logout',function(req,res){
+        userController.logout(req,res,function(success,msg){
+            if(success){
+                res.status(200).json({'msg':msg});
+            }else{
+                res.status(200).json({'msg':msg});
+            }
+        })
+    });
     io.on('connection',function(socket){
         console.log("Connection :User is connected  "+handle);
         console.log("Connection : " +socket.id);
@@ -84,7 +97,7 @@ module.exports = function (app,io){
         //console.log(connectedUsers);
         //console.log("keys list : ");
         //console.log(keys)
-        userCollection.find({"handle" : handle},{friends:1,_id:0},function(err,doc){
+       /* userCollection.find({"handle" : handle},{friends:1,_id:0},function(err,doc){
             if(err){res.json(err);}
             else{
                 //console.log(doc);
@@ -116,8 +129,13 @@ module.exports = function (app,io){
                 io.to(socket.id).emit('pending_list', pending);
                 io.emit('users',users);
             }
-        });
-        
+        });*/
+        userController.getFriendReq(handle,function(result){
+            io.to(socket.id).emit('pending_list', result);
+        })
+        userController.getFriends(handle,function(result){
+            io.to(socket.id).emit('friend_list', result);
+        })
         groupsCollection.find({ members: { $elemMatch: { user: handle } } }).exec()
         .then(groups=>{
             io.to(socket.id).emit('group_list', groups);
@@ -273,9 +291,31 @@ module.exports = function (app,io){
         })
     });
     
-    app.post('/friend_request',userController.friend_req);
+    app.post('/friend_request',function(req,res){
+        userController.friend_req(req,res,function(success,msg){
+            if(success)
+            {
+                io.to(users[req.body.friend_handle]).emit('friendrequest', req.body);
+                res.status(200).json({'msg':msg});
+            }else{
+                res.status(200).json({'msg':msg});
+            }
+            
+        });
+    });
     
-    app.post('/friend_request/confirmed',userController.confirm_req);
+    app.post('/friend_request/confirmed',function(req,res){
+        userController.confirm_req(req,res,function(success,msg){
+            if(success){
+                res.status(200).json({'msg':msg});
+                io.to(users[req.body.friend_handle]).emit('friendnotification', req.body.my_handle);
+                io.to(users[req.body.my_handle]).emit('friendnotification', req.body.friend_handle);
+            }
+            else{
+                res.status(200).json({'msg':msg});
+            }
+        })
+    })
     
     app.post('/addgroup',function(req,res){
         groupController.addGroup(req,res,function(result){

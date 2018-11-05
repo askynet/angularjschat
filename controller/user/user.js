@@ -4,10 +4,10 @@ var groupsCollection=require('../../model/groups');
 var groupmsgCollection=require('../../model/groupsmsg');
 var messagesCollection=require('../../model/messages');
 var socketusersCollection=require('../../model/socketusers')
-module.exports.register=function(req,res){
-    res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader("Access-Control-Allow-Method","'GET, POST, OPTIONS, PUT, PATCH, DELETE'");
-        var user={
+var friendreq=require('../../model/friendsrequest');
+class userHandler {
+    register(req,res,callback){
+       var user={
             "name":req.body.name,
             "handle":req.body.handle,
             "password":req.body.password,
@@ -17,136 +17,147 @@ module.exports.register=function(req,res){
         console.log(user);
         userCollection.findOne({"handle":req.body.handle},function(err,doc){
             if(err){
-                res.json(err); 
+                callback(false,'something went wrong');
             }
             if(doc == null){
                 userCollection.create(user,function(err,doc){
                     if(err) res.json(err);
                     else{
-                        res.send("success");
+                        callback(true,'success');
                     }
                 });
             }else{
-                res.send("User already found");
+                callback(false,'user already found');
             }
         })
-}
-
-
-module.exports.friend_req=function(req,res){
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader("Access-Control-Allow-Method","'GET, POST, OPTIONS, PUT, PATCH, DELETE'");
-    friend=true;
-    userCollection.find({"handle" : req.body.my_handle,"friends.name":req.body.friend_handle},function(err,doc){
-        if(err){res.json(err);}
-        else if(doc.length!=0){
-            console.log("Friend request : "+doc.length);
-            console.log("Friend request : friend request already sent "+doc);
-            res.send("Friend request already sent ");
-        }
-        else{
-            console.log("Friend request : "+doc.length);
-            userCollection.update({
-                handle:req.body.my_handle
-            },{
-                $push:{
-                    friends:{
-                        name: req.body.friend_handle,
-                        status: "Pending"
+    }
+    friend_req(req,res,callback){
+        var friend=true;
+        friendreq.findOne({"fromhandle" : req.body.my_handle,"tohandle":req.body.friend_handle},function(err,doc){
+            if(doc==null){
+                friendreq.findOne({
+                    "fromhandle" : req.body.friend_handle,
+                    "tohandle":req.body.my_handle
+                },function(err,doc){
+                    if(doc!=null){
+                        friendreq.update({
+                            "tohandle":req.body.my_handle,
+                            "fromhandle":req.body.friend_handle
+                        },{
+                            '$set':{
+                                "status":"Friend"
+                            }
+                        },function(err,doc){
+                            if(err){callback(false,'something went wrong');}
+                            else{
+                                console.log("friend request accepted from you : Inside no confirmed");
+                                callback(true,'success');
+                            }
+                        });
+                    }else{
+                        friendreq.create({
+                            "fromhandle" : req.body.my_handle,
+                            "tohandle":req.body.friend_handle,
+                            "status":"Pending",
+                            "active":true,
+                            "createon":new Date()
+                        })
+                        callback(true,'Success');
                     }
-                }
-            },{
-                upsert:true
-            },function(err,doc){
-                if(err){res.json(err);}
-                //            else{
-                //                console.log(doc);
-                //            }
-            });
-            req.io.to(users[req.body.friend_handle]).emit('message', req.body);
-        }
-    });
-}
-
-module.exports.confirm_req=function(req,res){
-    console.log("friend request confirmed : "+req.body);
-    if(req.body.confirm=="Yes"){
-        userCollection.find({
-            "handle" : req.body.friend_handle,
-            "friends.name":req.body.my_handle
-        },function(err,doc){
-            if(err){
-                res.json(err);
+                })
             }
-            else if(doc.length!=0){
-                console.log("Friend request confirmed : "+doc.length);
-                console.log("Friend request confirmed : friend request already sent "+doc);
-                res.send("Friend request already accepted");
+            else if(doc.status=='Pending'){
+                console.log("Friend request : "+doc.length);
+                console.log("Friend request : friend request already sent "+doc);
+                callback(false,"Friend request already sent ");
             }
             else{
-                userCollection.update({
-                    "handle":req.body.my_handle,
-                    "friends.name":req.body.friend_handle
-                },{
-                    '$set':{
-                        "friends.$.status":"Friend"
-                    }
-                },function(err,doc){
-                    if(err){res.json(err);}
-                    else{
-
-                        console.log("friend request confirmed : Inside yes confirmed");
-                        req.io.to(users[req.body.friend_handle]).emit('friend', req.body.my_handle);
-                        req.io.to(users[req.body.my_handle]).emit('friend', req.body.friend_handle);
-                    }
-                });
-                userCollection.update({
-                    handle:req.body.friend_handle
-                },{
-                    $push:{
-                        friends:{
-                            name: req.body.my_handle,
-                            status: "Friend"
-                        }
-                    }
-                },{upsert:true},function(err,doc){
-                    if(err){res.json(err);}
-                    //            else{
-                    //                console.log(doc);
-                    //            }
-                });
+                console.log("Friend request : "+doc.length);
+                console.log("Friend request : friend request already sent "+doc);
+                callback(false,"already friend ");
             }
         });
     }
-    else{
-        
-        console.log("friend request confirmed : Inside No confirmed");
-        userCollection.update({
-            "handle":req.body.my_handle
-        },{
-            '$pull':{
-                'friends':{
-                    "name":req.body.friend_handle,
+    confirm_req(req,res,callback){
+        console.log("friend request confirmed : "+req.body);
+        if(req.body.confirm=="Yes"){
+            friendreq.findOne({
+                "fromhandle" : req.body.friend_handle,
+                "tohandle":req.body.my_handle
+            },function(err,doc){
+                if(err){
+                    callback(false,'something went wrong');
                 }
-            }
-        },function(err,doc){
-        if(err){res.json(err);}
-        else{
-            console.log("No");
+                else if(doc.status=='Friend'){
+                    console.log("Friend request confirmed : "+doc.length);
+                    console.log("Friend request confirmed : friend request already sent "+doc);
+                    callback(false,"Friend request already accepted");
+                }
+                else{
+                    friendreq.update({
+                        "fromhandle":req.body.my_handle,
+                        "tohandle":req.body.friend_handle
+                    },{
+                        '$set':{
+                            "status":"Friend"
+                        }
+                    },function(err,doc){
+                        if(err){callback(false,'something went wrong');}
+                        else{
+                            console.log("friend request confirmed : Inside yes confirmed");
+                            callback(true,'success');
+                        }
+                    });
+                }
+            });
         }
-    });
+        else{
+            console.log("friend request confirmed : Inside No confirmed");
+            friendreq.update({
+                "fromhandle":req.body.my_handle,
+                "tohandle":req.body.friend_handle
+            },{
+                '$set':{
+                    "status":"Rejected"
+                }
+            },function(err,doc){
+                if(err){callback(false,'something went wrong');}
+                else{
+                    console.log("friend request decline : Inside no confirmed");
+                    callback(false,'success');
+                }
+            });
+        }
     }
-}
-
-module.exports.logout=function(req,res){
+    logout(req,res,callback){
         console.log(req.body.handle);
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader("Access-Control-Allow-Method","'GET, POST, OPTIONS, PUT, PATCH, DELETE'");
-        handle = req.body.roomhandler;
+        var handle = req.body.roomhandler;
         socketusersCollection.deleteMany({"handle":req.body.handle}).exec()
         .then(msgs=>{
-            res.sendStatus(200);
+            callback(true,'success');
         }).catch(e=>{
-            res.json(err);
+            callback(false,'something went wrong');
         });
+    }
+    getFriendReq(handle,callback){
+        friendreq.find({tohandle:handle,status:'Pending'}).exec()
+        .then(result=>{
+            callback(result);
+        })
+        .catch(err=>{
+            callback([]);
+        })
+    }
+    getFriends(handle,callback){
+        friendreq.find({$and:[{ $or:[ {'fromhandle':handle}, {'tohandle':handle}]},{status:'Friend'}]}).exec()
+        .then(result=>{
+            callback(result);
+        })
+        .catch(err=>{
+            callback([]);
+        })
+    }
+
 }
+module.exports = new userHandler();
+
